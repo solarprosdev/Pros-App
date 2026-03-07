@@ -1,5 +1,22 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Auth: SendGrid OTP login
+
+- **Flow:** User enters email → app generates a 7-character alphanumeric code → SendGrid emails it → user enters the code → if it matches, they’re logged in (session cookie).
+- **No Firebase.** Session is a signed cookie (JWT-style) using `JWT_SECRET`.
+
+**What you need to do:**
+
+1. Get an API key from [SendGrid](https://app.sendgrid.com/) (Settings → API Keys → Create API Key with Mail Send).
+2. Copy `.env.local.example` to `.env.local` and set:
+   - `SENDGRID_API_KEY` – your SendGrid API key
+   - `JWT_SECRET` – a long random string (min 16 chars) for signing sessions
+3. Optional: `SENDGRID_FROM_EMAIL` and `SENDGRID_FROM_NAME` for the sender (defaults to `noreply@example.com`; in production use a verified sender in SendGrid).
+
+Then run `npm run dev`, open `/`, enter your email, request a code, and sign in with the code from the email.
+
+---
+
 ## Getting Started
 
 First, run the development server:
