@@ -26,9 +26,16 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const email = typeof body.email === "string" ? body.email.trim() : "";
+  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json({ error: "Valid email is required" }, { status: 400 });
+  }
+  const allowedDomain = "solarpros.io";
+  if (!email.endsWith(`@${allowedDomain}`)) {
+    return NextResponse.json(
+      { error: `Only @${allowedDomain} email addresses can sign in.` },
+      { status: 403 }
+    );
   }
   const code = generateCode(7);
   setOtp(email, code);
