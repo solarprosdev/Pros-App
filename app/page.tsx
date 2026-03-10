@@ -23,7 +23,7 @@ const empty: ProfileData = {
 
 const FIELDS: { key: keyof ProfileData; label: string }[] = [
   { key: "bank", label: "Bank Name" },
-  { key: "account", label: "Account Name" },
+  { key: "account", label: "Account Number" },
   { key: "routing", label: "Routing Number" },
   { key: "email", label: "Email" },
   { key: "name", label: "Full Name" },
