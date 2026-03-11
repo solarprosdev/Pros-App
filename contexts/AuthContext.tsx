@@ -53,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
+      credentials: "include",
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -64,7 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await fetch("/api/auth/verify-code", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, code }),
+      body: JSON.stringify({ email, code: code.trim().toUpperCase() }),
+      credentials: "include",
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {

@@ -47,15 +47,24 @@ export default function Home() {
   const [loginError, setLoginError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Fetch profile when signed in and viewing Direct Deposit Info (sync from Airtable)
   useEffect(() => {
-    if (!user) return;
+    if (!user || activeSection !== "direct-deposit") return;
     let cancelled = false;
+    setProfileLoading(true);
     (async () => {
       try {
         const res = await fetch("/api/profile", { cache: "no-store", credentials: "include" });
         const json = await res.json().catch(() => ({}));
         if (cancelled) return;
         if (!res.ok) {
+          setData({ ...empty, email: user.email });
+          setProfileLoading(false);
+          return;
+        }
+        const profileEmail = typeof json.email === "string" ? json.email.trim().toLowerCase() : "";
+        const currentUserEmail = user.email.trim().toLowerCase();
+        if (profileEmail && profileEmail !== currentUserEmail) {
           setData({ ...empty, email: user.email });
           setProfileLoading(false);
           return;
@@ -73,10 +82,8 @@ export default function Home() {
         if (!cancelled) setProfileLoading(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
+    return () => { cancelled = true; };
+  }, [user, activeSection]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -235,24 +242,7 @@ export default function Home() {
     );
   }
 
-  // Signed in: app with nav (mobile drawer + web sidebar)
-  const nav = (
-    <AppNav
-      activeSection={activeSection}
-      onSelect={setActiveSection}
-      onClose={() => setDrawerOpen(false)}
-      userEmail={user.email}
-      isDrawer
-    />
-  );
-  const sidebar = (
-    <AppNav
-      activeSection={activeSection}
-      onSelect={setActiveSection}
-      userEmail={user.email}
-    />
-  );
-
+  // Signed in: app with nav (mobile drawer + web sidebar), Order Cards & Direct Deposit
   const directDepositContent = (
     <>
       {profileLoading ? (
@@ -331,7 +321,6 @@ export default function Home() {
 
   const ORDER_BADGE_URL = "https://solarproslocker.com/products/id-badge";
   const ORDER_BUSINESS_CARDS_URL = "https://solarproslocker.com/collections/all-products/products/business-cards";
-
   const orderCardsContent = (
     <div className="flex w-full max-w-md flex-col gap-5 mx-auto">
       <p className="text-zinc-200">
@@ -367,13 +356,14 @@ export default function Home() {
           </svg>
         </a>
       </div>
-
+      <p className="text-zinc-500 text-xs pt-1">
+        *Right click to copy image if you wish to use for ID Badge.
+      </p>
     </div>
   );
 
   return (
     <div className="relative min-h-screen bg-[#171717]">
-      {/* Mobile drawer overlay */}
       {drawerOpen && (
         <div className="fixed inset-0 z-40 flex md:hidden" role="dialog" aria-label="Menu">
           <button
@@ -383,7 +373,13 @@ export default function Home() {
             aria-label="Close menu"
           />
           <div className="relative z-10 flex flex-col">
-            {nav}
+            <AppNav
+              activeSection={activeSection}
+              onSelect={setActiveSection}
+              onClose={() => setDrawerOpen(false)}
+              userEmail={user.email}
+              isDrawer
+            />
           </div>
         </div>
       )}
@@ -415,9 +411,12 @@ export default function Home() {
       </header>
 
       <div className="flex min-h-[calc(100vh-5rem)]">
-        {/* Web: left sidebar */}
         <div className="hidden md:block border-r border-zinc-800 bg-[#171717]">
-          {sidebar}
+          <AppNav
+            activeSection={activeSection}
+            onSelect={setActiveSection}
+            userEmail={user.email}
+          />
         </div>
 
         <main className="flex flex-1 flex-col items-center justify-start w-full bg-[#171717] px-4 py-6 sm:px-6 pt-6 overflow-auto">
