@@ -235,7 +235,7 @@ export default function Home() {
   // Signed in: show profile
   return (
     <div className="relative min-h-screen bg-white">
-      <header className="bg-[#420000] px-6 py-4">
+      <header className="bg-[#420000] px-4 py-4 sm:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Image
@@ -251,7 +251,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex min-h-[calc(100vh-5rem)] flex-col items-center justify-center w-full">
+      <main className="flex min-h-[calc(100vh-5rem)] flex-col items-center justify-center w-full px-4 sm:px-6">
         {profileLoading ? (
           <p className="text-zinc-500 text-lg">Loading your info…</p>
         ) : isEditing ? (
