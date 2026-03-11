@@ -1,6 +1,7 @@
 /**
- * Airtable client: fetch/update Recruits record by Email Lower (login email).
- * Table: Recruits Private. Fields: Full Name, Email Lower, Bank Name, Account Number, Routing Number.
+ * Airtable client: fetch/update Recruits record by Email Lower or Work Email.
+ * Table: Recruits Private. Lookup order: 1) Email Lower, 2) Name/Rep Work Email Final (from Recruit ID Analysis Link).
+ * Login and sync are only allowed when a record matches one of these columns.
  */
 
 const RAW_BASE_ID = process.env.AIRTABLE_BASE_ID?.trim() ?? "";
@@ -12,6 +13,7 @@ const RECRUITS_TABLE = process.env.AIRTABLE_RECRUITS_TABLE?.trim() || "Recruits 
 
 // Airtable field names in your Recruits Private table
 const FIELD_EMAIL = process.env.AIRTABLE_FIELD_EMAIL || "Email Lower";
+const FIELD_WORK_EMAIL = process.env.AIRTABLE_FIELD_WORK_EMAIL || "Name/Rep Work Email Final (from Recruit ID Analysis Link)";
 const FIELD_NAME = process.env.AIRTABLE_FIELD_NAME || "Full Name";
 const FIELD_BANK = process.env.AIRTABLE_FIELD_BANK || "Bank Name";
 const FIELD_ACCOUNT = process.env.AIRTABLE_FIELD_ACCOUNT || "Account Number";
@@ -31,11 +33,14 @@ function getAuthHeader(): string {
   return `Bearer ${API_KEY}`;
 }
 
-function encodeFormula(email: string): string {
-  // Email Lower in Airtable is typically lowercase; compare with lowercased login email
-  const normalized = email.trim().toLowerCase();
+function normalizedEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function encodeFormulaForField(fieldName: string, email: string): string {
+  const normalized = normalizedEmail(email);
   const escaped = normalized.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-  return `{${FIELD_EMAIL}}='${escaped}'`;
+  return `{${fieldName}}='${escaped}'`;
 }
 
 /** Get field value from Airtable record; try exact key then case-insensitive match (Airtable can return different casing). */
@@ -56,18 +61,9 @@ export function isAirtableConfigured(): boolean {
   return Boolean(BASE_ID && API_KEY);
 }
 
-/**
- * Fetch the first Recruits record where Email Lower matches the login email.
- */
-export async function getRecruitByEmail(email: string): Promise<RecruitRecord | null> {
-  const log = (msg: string, ...args: unknown[]) => console.log("[Airtable]", msg, ...args);
-  if (!BASE_ID || !API_KEY) {
-    log("getRecruitByEmail skipped: missing BASE_ID or API_KEY", { hasBase: !!BASE_ID, hasKey: !!API_KEY, keyLength: API_KEY?.length ?? 0 });
-    return null;
-  }
-  const formula = encodeFormula(email);
+/** Fetch first record matching the given filter formula. */
+async function fetchRecruitByFormula(formula: string): Promise<{ id: string; fields: Record<string, unknown> } | null> {
   const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(RECRUITS_TABLE)}?filterByFormula=${encodeURIComponent(formula)}&maxRecords=1`;
-  log("fetching recruit", { email, emailLower: email.trim().toLowerCase(), formula, table: RECRUITS_TABLE });
   const res = await fetch(url, {
     headers: { Authorization: getAuthHeader() },
     next: { revalidate: 0 },
@@ -78,33 +74,60 @@ export async function getRecruitByEmail(email: string): Promise<RecruitRecord | 
     throw new Error(`Airtable ${res.status}: ${errText.slice(0, 200)}`);
   }
   const data = (await res.json()) as { records?: { id: string; fields: Record<string, unknown> }[] };
-  const record = data.records?.[0];
-  const recordCount = data.records?.length ?? 0;
-  log("response", { recordCount, hasRecord: !!record });
-  if (!record) {
-    log("no record found for this email – check that a row in Recruits Private has Email Lower =", email.trim().toLowerCase());
-    return null;
-  }
-  const fields = record.fields;
-  log("record fields (exact keys from Airtable):", Object.keys(fields));
-  log("raw fields (values):", Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, typeof v === "string" ? v : Array.isArray(v) ? v[0] : v])));
+  return data.records?.[0] ?? null;
+}
 
+function recordToRecruit(record: { id: string; fields: Record<string, unknown> }, loginEmail: string): RecruitRecord {
+  const fields = record.fields;
   const name = getFieldValue(fields, FIELD_NAME, "Full Name", "Name", "full name", "name");
   const emailVal = getFieldValue(fields, FIELD_EMAIL, "Email Lower", "Email", "email lower", "email");
   const bank = getFieldValue(fields, FIELD_BANK, "Bank Name", "Bank", "bank name", "bank");
   const account = getFieldValue(fields, FIELD_ACCOUNT, "Account Number", "Account", "account number", "account");
   const routing = getFieldValue(fields, FIELD_ROUTING, "Routing Number", "Routing", "routing number", "routing");
-
-  const result = {
+  return {
     id: record.id,
     name,
-    email: emailVal || email.trim(),
+    email: emailVal || loginEmail,
     bank,
     account,
     routing,
   };
-  log("mapped profile:", result);
-  return result;
+}
+
+/**
+ * Fetch the first Recruits record where the login email matches.
+ * Lookup order: 1) Email Lower, 2) Name/Rep Work Email Final (from Recruit ID Analysis Link).
+ * If neither matches, returns null (user cannot login or sync).
+ */
+export async function getRecruitByEmail(email: string): Promise<RecruitRecord | null> {
+  const log = (msg: string, ...args: unknown[]) => console.log("[Airtable]", msg, ...args);
+  if (!BASE_ID || !API_KEY) {
+    log("getRecruitByEmail skipped: missing BASE_ID or API_KEY", { hasBase: !!BASE_ID, hasKey: !!API_KEY, keyLength: API_KEY?.length ?? 0 });
+    return null;
+  }
+  const normalized = normalizedEmail(email);
+  log("fetching recruit", { email: normalized, table: RECRUITS_TABLE });
+
+  // 1) Try Email Lower first
+  const formulaEmailLower = encodeFormulaForField(FIELD_EMAIL, email);
+  let record = await fetchRecruitByFormula(formulaEmailLower);
+  if (record) {
+    log("match on Email Lower", { recordId: record.id });
+    log("record fields (exact keys from Airtable):", Object.keys(record.fields));
+    return recordToRecruit(record, normalized);
+  }
+
+  // 2) If no match, try Name/Rep Work Email Final (from Recruit ID Analysis Link)
+  const formulaWorkEmail = encodeFormulaForField(FIELD_WORK_EMAIL, email);
+  record = await fetchRecruitByFormula(formulaWorkEmail);
+  if (record) {
+    log("match on Name/Rep Work Email Final", { recordId: record.id });
+    log("record fields (exact keys from Airtable):", Object.keys(record.fields));
+    return recordToRecruit(record, normalized);
+  }
+
+  log("no record found for this email (checked Email Lower and Name/Rep Work Email Final)");
+  return null;
 }
 
 /**

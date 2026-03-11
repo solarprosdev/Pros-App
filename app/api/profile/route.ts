@@ -38,7 +38,7 @@ export async function GET() {
         log("returning Airtable profile");
         return NextResponse.json({ ...payload, _debug: { source: "airtable", airtableConfigured: true } });
       }
-      debug.error = "No Airtable record found for this email (Email Lower must match exactly).";
+      debug.error = "No Airtable record found for this email (Email Lower or Name/Rep Work Email Final).";
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       log("Airtable error:", message);
