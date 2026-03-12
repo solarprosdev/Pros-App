@@ -3,6 +3,9 @@ import { getSessionFromCookie } from "@/lib/session";
 import { getProfile, setProfile, type UserProfile } from "@/lib/profile-store";
 import { getRecruitByEmail, isAirtableConfigured } from "@/lib/airtable";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 function toProfile(recruit: { name: string; email: string; bank: string; account: string; routing: string }): UserProfile {
   return {
     name: recruit.name,
@@ -36,7 +39,10 @@ export async function GET() {
       if (recruit) {
         const payload = toProfile(recruit);
         log("returning Airtable profile");
-        return NextResponse.json({ ...payload, _debug: { source: "airtable", airtableConfigured: true } });
+        return NextResponse.json(
+          { ...payload, _debug: { source: "airtable", airtableConfigured: true } },
+          { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" } }
+        );
       }
       debug.error = "No Airtable record found for this email (Email Lower or Name/Rep Work Email Final).";
     } catch (err) {
@@ -57,7 +63,10 @@ export async function GET() {
     name: "",
   };
   log("returning in-memory/empty profile");
-  return NextResponse.json({ ...data, _debug: debug });
+  return NextResponse.json(
+    { ...data, _debug: debug },
+    { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" } }
+  );
 }
 
 export async function POST(request: Request) {

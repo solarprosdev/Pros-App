@@ -47,7 +47,7 @@ export default function Home() {
   const [loginError, setLoginError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // Fetch profile when signed in and viewing Direct Deposit Info (sync from Airtable)
+  // Fetch profile when signed in and viewing Direct Deposit Info (sync from Airtable, no cache)
   useEffect(() => {
     if (!user || activeSection !== "direct-deposit") return;
     let cancelled = false;
