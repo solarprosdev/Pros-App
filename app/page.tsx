@@ -47,6 +47,17 @@ export default function Home() {
   const [loginError, setLoginError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Reset sign-in flow to email step when user signs out
+  useEffect(() => {
+    if (!user) {
+      setStep("email");
+      setEmail("");
+      setCode("");
+      setLoginError("");
+      setBusy(false);
+    }
+  }, [user]);
+
   // Fetch profile when signed in and viewing Direct Deposit Info (sync from Airtable, no cache)
   useEffect(() => {
     if (!user || activeSection !== "direct-deposit") return;
