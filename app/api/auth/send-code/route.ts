@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getRecruitByEmail, isAirtableConfigured } from "@/lib/airtable";
 import { setOtp } from "@/lib/otp-store";
 import { sendOtpEmail, isSendGridConfigured } from "@/lib/sendgrid";
 
@@ -37,16 +36,6 @@ export async function POST(request: Request) {
       { error: `Only @${allowedDomain} email addresses can sign in.` },
       { status: 403 }
     );
-  }
-  // Only allow login if user exists in Airtable (Email Lower or Name/Rep Work Email Final)
-  if (isAirtableConfigured()) {
-    const recruit = await getRecruitByEmail(email);
-    if (!recruit) {
-      return NextResponse.json(
-        { error: "No matching record found. You are not authorized to sign in." },
-        { status: 403 }
-      );
-    }
   }
   const code = generateCode(7);
   setOtp(email, code);
