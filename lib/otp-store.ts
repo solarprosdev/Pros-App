@@ -7,12 +7,10 @@ const OTP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
 
 const globalKey = "__pros_app_otp_store";
 type Store = Map<string, { code: string; expiresAt: number }>;
-const store: Store =
-  typeof globalThis !== "undefined" && (globalThis as Record<string, Store>)[globalKey]
-    ? (globalThis as Record<string, Store>)[globalKey]
-    : new Map();
-if (typeof globalThis !== "undefined") {
-  (globalThis as Record<string, Store>)[globalKey] = store;
+const g = typeof globalThis !== "undefined" ? (globalThis as unknown as Record<string, Store>) : null;
+const store: Store = g?.[globalKey] ?? new Map();
+if (g) {
+  g[globalKey] = store;
 }
 
 export function setOtp(email: string, code: string): void {
