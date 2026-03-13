@@ -106,14 +106,13 @@ export async function POST(request: Request) {
   if (!webhookUrl) {
     makeLog("MAKE_WEBHOOK_URL is not set – skipping Make.com webhook");
   } else {
-    const nameParts = (updated.name || "").trim().split(/\s+/).filter(Boolean);
-    const firstOnly = nameParts.slice(0, -1).join(" ");
+    const fullName = (updated.name || "").trim();
     const makePayload = {
       Bank: updated.bank,
       Account: updated.account,
       Routing: updated.routing,
       Email: updated.email,
-      First: firstOnly,
+      First: fullName,
     };
     makeLog("Calling Make.com webhook – payload:", JSON.stringify(makePayload, null, 2));
     try {
