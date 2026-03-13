@@ -401,9 +401,7 @@ export default function Home() {
         </a>
       </div>
 
-      <p className="text-center text-xs text-zinc-600">
-        *Right click to copy image if you wish to use for ID Badge.
-      </p>
+     
     </div>
   );
 
