@@ -151,206 +151,239 @@ export default function Home() {
 
   if (authLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <p className="text-zinc-500">Loading…</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#0d0d0d]">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-700 border-t-[#cc0000]" />
       </div>
     );
   }
 
-  // Not signed in: show sign-in page (no separate "home" or "Go to Login")
   if (!user) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-white px-4">
-        <span className="text-2xl font-bold text-[#420000]">Pros App</span>
-        <Image
-          src="/pros-app-logo.webp"
-          alt="Pros App"
-          width={160}
-          height={80}
-          className="object-contain"
-          priority
-        />
-        <h1 className="text-2xl font-semibold text-[#171717]">
-          Sign in
-        </h1>
-        <p className="text-center text-zinc-600">
-          {step === "email"
-            ? "Enter your email to receive a one-time login code."
-            : "Enter the 7-character code we sent to your email."}
-        </p>
+      <div className="relative flex min-h-screen flex-col bg-[#0d0d0d] px-5">
+        {/* Centered card */}
+        <div className="flex flex-1 items-center justify-center">
+          <div className="w-full max-w-sm rounded-2xl border border-white/[0.07] bg-[#161616] p-8 shadow-2xl">
+            {/* Card header */}
+            <div className="mb-7 flex flex-col items-center gap-3 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#0d0d0d] ring-1 ring-white/[0.08]">
+                <Image
+                  src="/pros-app-logo.webp"
+                  alt="Pros App"
+                  width={36}
+                  height={36}
+                  className="object-contain"
+                />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold tracking-tight text-white">Pros App</h1>
+                <p className="mt-0.5 text-xs text-zinc-500 tracking-wide">Portal Login</p>
+              </div>
+            </div>
 
-        {step === "email" ? (
-          <form onSubmit={handleSendCode} className="flex w-full max-w-sm flex-col gap-4">
-            <div>
-              <label htmlFor="email" className="mb-1 block text-sm font-medium text-zinc-700">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 placeholder-zinc-500 focus:border-[#420000] focus:outline-none focus:ring-1 focus:ring-[#420000]"
-                placeholder="you@solarpros.io"
-              />
-            </div>
-            {loginError && (
-              <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">
-                {loginError}
-              </p>
+            {step === "email" ? (
+              <form onSubmit={handleSendCode} className="flex flex-col gap-4">
+                <div>
+                  <label htmlFor="login-email" className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400">
+                    Email Address
+                  </label>
+                  <input
+                    id="login-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                    className="w-full rounded-lg border border-white/[0.08] bg-[#0d0d0d] px-4 py-3 text-sm text-white placeholder-zinc-600 transition focus:border-[#cc0000]/60 focus:outline-none focus:ring-1 focus:ring-[#cc0000]/40"
+                    placeholder="you@solarpros.io"
+                  />
+                </div>
+                {loginError && (
+                  <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2.5">
+                    <svg className="mt-0.5 h-4 w-4 shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                    <p className="text-sm text-red-400">{loginError}</p>
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#8b0000] px-4 py-3 text-sm font-bold uppercase tracking-widest text-white transition hover:bg-[#a00000] disabled:opacity-50"
+                >
+                  {busy ? (
+                    <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />Sending…</>
+                  ) : "Get Code"}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyCode} className="flex flex-col gap-4">
+                <div className="rounded-lg border border-white/[0.05] bg-[#0d0d0d]/60 px-4 py-2.5">
+                  <p className="text-xs text-zinc-500">Code sent to</p>
+                  <p className="text-sm font-medium text-white">{email}</p>
+                </div>
+                <div>
+                  <label htmlFor="login-code" className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400">
+                    Verification Code
+                  </label>
+                  <input
+                    id="login-code"
+                    type="text"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 7))}
+                    required
+                    maxLength={7}
+                    autoComplete="one-time-code"
+                    className="w-full rounded-lg border border-white/[0.08] bg-[#0d0d0d] px-4 py-3 text-center font-mono text-xl tracking-[0.4em] text-white placeholder-zinc-700 transition focus:border-[#cc0000]/60 focus:outline-none focus:ring-1 focus:ring-[#cc0000]/40"
+                    placeholder="·······"
+                  />
+                </div>
+                {loginError && (
+                  <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2.5">
+                    <svg className="mt-0.5 h-4 w-4 shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                    <p className="text-sm text-red-400">{loginError}</p>
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#8b0000] px-4 py-3 text-sm font-bold uppercase tracking-widest text-white transition hover:bg-[#a00000] disabled:opacity-50"
+                >
+                  {busy ? (
+                    <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />Verifying…</>
+                  ) : "Verify & Sign In"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setStep("email"); setCode(""); setLoginError(""); }}
+                  className="text-center text-xs text-zinc-600 transition hover:text-zinc-400"
+                >
+                  ← Use a different email
+                </button>
+              </form>
             )}
-            <button
-              type="submit"
-              disabled={busy}
-              className="rounded-lg bg-[#420000] px-4 py-3 font-medium text-white transition hover:bg-[#5a0000] disabled:opacity-50"
-            >
-              {busy ? "Sending…" : "Send code"}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleVerifyCode} className="flex w-full max-w-sm flex-col gap-4">
-            <p className="text-sm text-zinc-500">Code sent to {email}</p>
-            <div>
-              <label htmlFor="code" className="mb-1 block text-sm font-medium text-zinc-700">
-                Code
-              </label>
-              <input
-                id="code"
-                type="text"
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 7))}
-                required
-                maxLength={7}
-                autoComplete="one-time-code"
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 font-mono text-lg tracking-widest text-zinc-900 placeholder-zinc-400 focus:border-[#420000] focus:outline-none focus:ring-1 focus:ring-[#420000]"
-                placeholder="XXXXXXX"
-              />
-            </div>
-            {loginError && (
-              <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">
-                {loginError}
-              </p>
-            )}
-            <button
-              type="submit"
-              disabled={busy}
-              className="rounded-lg bg-[#420000] px-4 py-3 font-medium text-white transition hover:bg-[#5a0000] disabled:opacity-50"
-            >
-              {busy ? "Verifying…" : "Verify and sign in"}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setStep("email"); setCode(""); setLoginError(""); }}
-              className="text-sm text-zinc-500 underline hover:text-zinc-700"
-            >
-              Use a different email
-            </button>
-          </form>
-        )}
+          </div>
+        </div>
+
+        <p className="pb-5 text-center text-xs text-zinc-700">© {new Date().getFullYear()} Solar Pros</p>
       </div>
     );
   }
 
-  // Signed in: app with nav (mobile drawer + web sidebar), Order Cards & Direct Deposit
+  const ORDER_BADGE_URL = "https://solarproslocker.com/products/id-badge";
+  const ORDER_BUSINESS_CARDS_URL = "https://solarproslocker.com/collections/all-products/products/business-cards";
+
+  const sectionTitle = activeSection === "direct-deposit" ? "Direct Deposit Info" : "Order Cards & Badge";
+
   const directDepositContent = (
-    <>
+    <div className="w-full max-w-lg mx-auto">
       {profileLoading ? (
-        <p className="text-zinc-400 text-lg">Loading your info…</p>
+        <div className="flex items-center justify-center py-20">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-700 border-t-[#cc0000]" />
+        </div>
       ) : isEditing ? (
-        <form onSubmit={handleSubmit} className="flex w-full max-w-md flex-col gap-5 mx-auto">
-          {FIELDS.map(({ key, label }) => (
-            <div key={key}>
-              <label htmlFor={key} className="mb-1.5 block text-base font-medium text-zinc-300">
-                {label}
-              </label>
-              <input
-                id={key}
-                type={key === "email" ? "email" : "text"}
-                value={data[key]}
-                onChange={(e) => setData((d) => ({ ...d, [key]: e.target.value }))}
-                className="w-full rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2.5 text-base text-white placeholder-zinc-500 focus:border-[#420000] focus:outline-none focus:ring-1 focus:ring-[#420000]"
-              />
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <div className="rounded-xl border border-white/[0.07] bg-[#161616] p-5 sm:p-6">
+            <h3 className="mb-5 text-xs font-semibold uppercase tracking-wider text-zinc-500">Edit Information</h3>
+            <div className="flex flex-col gap-4">
+              {FIELDS.map(({ key, label }) => (
+                <div key={key}>
+                  <label htmlFor={`field-${key}`} className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                    {label}
+                  </label>
+                  <input
+                    id={`field-${key}`}
+                    type={key === "email" ? "email" : "text"}
+                    value={data[key]}
+                    onChange={(e) => setData((d) => ({ ...d, [key]: e.target.value }))}
+                    className="w-full rounded-lg border border-white/[0.08] bg-[#0d0d0d] px-4 py-2.5 text-sm text-white placeholder-zinc-600 transition focus:border-[#cc0000]/60 focus:outline-none focus:ring-1 focus:ring-[#cc0000]/40"
+                  />
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
           {message && (
-            <p
-              className={
-                message.type === "ok"
-                  ? "text-base text-green-400"
-                  : "text-base text-red-400"
-              }
-            >
+            <div className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm ${message.type === "ok" ? "border border-green-500/20 bg-green-500/10 text-green-400" : "border border-red-500/20 bg-red-500/10 text-red-400"}`}>
               {message.text}
-            </p>
+            </div>
           )}
-          <div className="flex gap-3 pt-1">
+          <div className="flex gap-3">
             <button
               type="submit"
               disabled={saving}
-              className="rounded-lg bg-[#420000] px-5 py-3 text-base font-medium text-white transition hover:bg-[#5a0000] disabled:opacity-50"
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#cc0000] px-5 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-[#b30000] disabled:opacity-50"
             >
-              {saving ? "Saving…" : "Save"}
+              {saving ? (
+                <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />Saving…</>
+              ) : "Save Changes"}
             </button>
             <button
               type="button"
-              onClick={() => {
-                setIsEditing(false);
-                setMessage(null);
-              }}
-              className="rounded-lg border border-zinc-600 px-5 py-3 text-base font-medium text-zinc-300 transition hover:bg-zinc-800"
+              onClick={() => { setIsEditing(false); setMessage(null); }}
+              className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-5 py-3 text-sm font-medium text-zinc-300 transition hover:bg-white/[0.08] hover:text-white"
             >
               Cancel
             </button>
           </div>
         </form>
       ) : (
-        <div className="flex w-full max-w-md flex-col gap-5 mx-auto">
-          {FIELDS.map(({ key, label }) => (
-            <div key={key} className="border-b border-zinc-700 pb-4">
-              <p className="text-sm font-semibold uppercase tracking-wide text-red-400">{label}</p>
-              <p className="mt-1 text-lg font-medium text-zinc-200">
-                {data[key] || "—"}
-              </p>
-            </div>
-          ))}
+        <div className="flex flex-col gap-5">
+          <div className="rounded-xl border border-white/[0.07] bg-[#161616] overflow-hidden">
+            {FIELDS.map(({ key, label }, i) => (
+              <div
+                key={key}
+                className={`flex flex-col gap-0.5 px-5 py-4 ${i < FIELDS.length - 1 ? "border-b border-white/[0.05]" : ""}`}
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">{label}</p>
+                <p className="text-sm font-medium text-white">
+                  {data[key] || <span className="text-zinc-600">—</span>}
+                </p>
+              </div>
+            ))}
+          </div>
           {message && (
-            <p className="text-base text-green-400">{message.text}</p>
+            <div className="flex items-center gap-2 rounded-lg border border-green-500/20 bg-green-500/10 px-4 py-3 text-sm text-green-400">
+              {message.text}
+            </div>
           )}
           <button
             type="button"
             onClick={() => setIsEditing(true)}
-            className="mt-2 w-fit rounded-lg bg-[#420000] px-5 py-2.5 text-base font-medium text-white transition hover:bg-[#5a0000]"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.04] px-5 py-3 text-sm font-medium text-zinc-200 transition hover:bg-white/[0.08] hover:text-white"
           >
-            Edit
+            <svg className="h-4 w-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Edit Information
           </button>
         </div>
       )}
-    </>
+    </div>
   );
 
-  const ORDER_BADGE_URL = "https://solarproslocker.com/products/id-badge";
-  const ORDER_BUSINESS_CARDS_URL = "https://solarproslocker.com/collections/all-products/products/business-cards";
   const orderCardsContent = (
-    <div className="flex w-full max-w-md flex-col gap-5 mx-auto">
-      <p className="text-zinc-200">
-        ID Badges and business cards are now available through the Pros Locker.
-      </p>
-      <p className="text-zinc-400 text-sm">
-        Badges are exempt from shipping costs and can be expected within 6 business days.
-      </p>
-      <p className="text-zinc-500 text-xs">
-        *Badges and Business cards will ship separately from other items ordered on the Locker.
-      </p>
-      <div className="flex flex-col gap-3 pt-2">
+    <div className="w-full max-w-lg mx-auto flex flex-col gap-6">
+      <div className="rounded-xl border border-white/[0.07] bg-[#161616] p-5 sm:p-6">
+        <p className="text-base font-medium leading-relaxed text-zinc-200">
+          ID Badges and business cards are now available through the Pros Locker.
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+          Badges are exempt from shipping costs and can be expected within 6 business days.
+        </p>
+        <p className="mt-3 text-xs text-zinc-600">
+          *Badges and Business cards will ship separately from other items ordered on the Locker.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-3">
         <a
           href={ORDER_BADGE_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#420000] px-4 py-3.5 font-medium text-white transition hover:bg-[#5a0000]"
+          className="flex w-full items-center justify-between gap-3 rounded-xl bg-[#cc0000] px-5 py-4 font-bold uppercase tracking-wide text-white transition hover:bg-[#b30000] active:scale-[0.98]"
         >
-          Order Badge Now
+          <span className="text-sm">Order Badge Now</span>
           <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
@@ -359,31 +392,33 @@ export default function Home() {
           href={ORDER_BUSINESS_CARDS_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#420000] px-4 py-3.5 font-medium text-white transition hover:bg-[#5a0000]"
+          className="flex w-full items-center justify-between gap-3 rounded-xl bg-[#cc0000] px-5 py-4 font-bold uppercase tracking-wide text-white transition hover:bg-[#b30000] active:scale-[0.98]"
         >
-          Order Business Cards
+          <span className="text-sm">Order Business Cards</span>
           <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
         </a>
       </div>
-      <p className="text-zinc-500 text-xs pt-1">
+
+      <p className="text-center text-xs text-zinc-600">
         *Right click to copy image if you wish to use for ID Badge.
       </p>
     </div>
   );
 
   return (
-    <div className="relative min-h-screen bg-[#171717]">
+    <div className="relative flex min-h-screen bg-[#0d0d0d]">
+      {/* Mobile drawer */}
       {drawerOpen && (
-        <div className="fixed inset-0 z-40 flex md:hidden" role="dialog" aria-label="Menu">
+        <div className="fixed inset-0 z-40 flex md:hidden" role="dialog" aria-label="Navigation">
           <button
             type="button"
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setDrawerOpen(false)}
             aria-label="Close menu"
           />
-          <div className="relative z-10 flex flex-col">
+          <div className="relative z-10 flex h-full flex-col">
             <AppNav
               activeSection={activeSection}
               onSelect={setActiveSection}
@@ -395,42 +430,44 @@ export default function Home() {
         </div>
       )}
 
-      <header className="bg-[#420000] px-4 py-4 sm:px-6">
-        <div className="flex items-center justify-between">
+      {/* Desktop sidebar */}
+      <div className="hidden md:flex flex-col h-screen sticky top-0 border-r border-white/[0.06]">
+        <AppNav
+          activeSection={activeSection}
+          onSelect={setActiveSection}
+          userEmail={user.email}
+        />
+      </div>
+
+      {/* Main area */}
+      <div className="flex flex-1 flex-col min-h-screen">
+        {/* Header */}
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-white/[0.06] bg-[#0d0d0d]/90 px-4 backdrop-blur-md sm:px-6">
           <div className="flex items-center gap-3">
+            {/* Mobile: hamburger + logo + name */}
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/40 md:hidden"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/[0.06] hover:text-white transition-colors focus:outline-none md:hidden"
               aria-label="Open menu"
             >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <Image
-              src="/pros-app-logo.webp"
-              alt="Pros App"
-              width={40}
-              height={40}
-              className="object-contain"
-            />
-            <span className="text-lg font-semibold text-white">Pros App</span>
+            {/* Logo + name on mobile (sidebar handles desktop) */}
+            <div className="flex items-center gap-2 md:hidden">
+              <Image src="/pros-app-logo.webp" alt="Pros App" width={26} height={26} className="object-contain" />
+              <span className="text-sm font-bold tracking-wide text-white">Pros App</span>
+            </div>
           </div>
+          {/* Page title — centered on desktop, hidden on mobile */}
+          <span className="hidden md:block absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-zinc-300">{sectionTitle}</span>
           <AuthHeader />
-        </div>
-      </header>
+        </header>
 
-      <div className="flex min-h-[calc(100vh-5rem)]">
-        <div className="hidden md:block border-r border-zinc-800 bg-[#171717]">
-          <AppNav
-            activeSection={activeSection}
-            onSelect={setActiveSection}
-            userEmail={user.email}
-          />
-        </div>
-
-        <main className="flex flex-1 flex-col items-center justify-start w-full bg-[#171717] px-4 py-6 sm:px-6 pt-6 overflow-auto">
+        {/* Content */}
+        <main className="flex-1 overflow-auto px-4 py-7 sm:px-8 sm:py-8">
           {activeSection === "direct-deposit" ? directDepositContent : orderCardsContent}
         </main>
       </div>

@@ -14,8 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sales Rep Portal",
-  description: "Update your sales representative information",
+  title: "Pros App",
+  description: "Solar Pros Member Portal",
+  icons: {
+    icon: "/pros-app-logo.webp",
+    apple: "/pros-app-logo.webp",
+  },
 };
 
 export default function RootLayout({
