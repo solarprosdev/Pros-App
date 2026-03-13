@@ -17,8 +17,12 @@ export const metadata: Metadata = {
   title: "Pros App",
   description: "Solar Pros Member Portal",
   icons: {
-    icon: "/pros-app-logo.webp",
+    icon: [
+      { url: "/pros-app-logo.webp", type: "image/webp" },
+      { url: "/pros-app-logo.webp", sizes: "any" },
+    ],
     apple: "/pros-app-logo.webp",
+    shortcut: "/pros-app-logo.webp",
   },
 };
 
