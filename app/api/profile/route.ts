@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/session";
 import { getProfile, setProfile, type UserProfile } from "@/lib/profile-store";
 import { getRecruitByEmail, isAirtableConfigured } from "@/lib/airtable";
+import { syncRampBankAccount, RampRoutingNumberError } from "@/lib/ramp";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -87,15 +88,41 @@ export async function POST(request: Request) {
   }
   console.log("[Profile POST] body keys:", Object.keys(body ?? {}));
 
-  const updated = setProfile(session.email, {
+  const incoming = {
     bank: typeof body.bank === "string" ? body.bank : undefined,
     account: typeof body.account === "string" ? body.account : undefined,
     routing: typeof body.routing === "string" ? body.routing : undefined,
     email: typeof body.email === "string" ? body.email : undefined,
     name: typeof body.name === "string" ? body.name : undefined,
-  });
+  };
 
-  // Send to Make.com webhook (structure: Bank, Account, Routing, Email, First – First = name without last word)
+  // ── Step 1: Validate routing number with Ramp BEFORE saving or calling Make ──
+  console.log("[Profile POST] ========== RAMP BANK SYNC SECTION (pre-save) ==========");
+  const fullNameForRamp = (incoming.name || "").trim();
+  const accountForRamp = (incoming.account || "").trim();
+  const routingForRamp = (incoming.routing || "").trim();
+
+  if (!fullNameForRamp || !accountForRamp || !routingForRamp) {
+    console.log("[Profile POST] [Ramp] Missing name, account, or routing – skipping Ramp sync");
+  } else {
+    try {
+      await syncRampBankAccount(fullNameForRamp, accountForRamp, routingForRamp);
+      console.log("[Profile POST] [Ramp] Bank account sync succeeded");
+    } catch (rampErr) {
+      if (rampErr instanceof RampRoutingNumberError) {
+        console.error("[Profile POST] [Ramp] Invalid routing number – aborting save:", rampErr.message);
+        return NextResponse.json({ error: rampErr.message }, { status: 422 });
+      }
+      // Other Ramp errors (vendor not found, network, etc.) – log but don't block save
+      const message = rampErr instanceof Error ? rampErr.message : String(rampErr);
+      console.error("[Profile POST] [Ramp] Non-blocking error – continuing with save:", message);
+    }
+  }
+
+  // ── Step 2: Save profile ──
+  const updated = setProfile(session.email, incoming);
+
+  // ── Step 3: Send to Make.com webhook ──
   console.log("[Profile POST] ========== MAKE WEBHOOK SECTION ==========");
   const webhookUrl = process.env.MAKE_WEBHOOK_URL?.trim();
   const makeLog = (msg: string, ...args: unknown[]) => console.log("[Profile POST] [Make]", msg, ...args);
@@ -121,7 +148,7 @@ export async function POST(request: Request) {
       makeLog("Webhook URL:", webhookUrl.slice(0, 50) + "...");
     }
 
-    const MAKE_TIMEOUT_MS = 60000; // 60s – wait for Make to accept (required on serverless so request completes)
+    const MAKE_TIMEOUT_MS = 60000;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), MAKE_TIMEOUT_MS);
 
