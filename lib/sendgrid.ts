@@ -5,7 +5,7 @@ if (apiKey) {
   sgMail.setApiKey(apiKey);
 }
 
-const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "noreply@example.com";
+const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "developer@solarpros.io";
 const FROM_NAME = process.env.SENDGRID_FROM_NAME || "Sales Rep Portal";
 const SUBJECT_LOGIN = process.env.SENDGRID_SUBJECT_LOGIN || "Verify your Pros App Portal login";
 const TEMPLATE_ID_LOGIN = process.env.SENDGRID_TEMPLATE_ID_LOGIN;
