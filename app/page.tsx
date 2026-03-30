@@ -80,13 +80,6 @@ export default function Home() {
           setProfileLoading(false);
           return;
         }
-        const profileEmail = typeof json.email === "string" ? json.email.trim().toLowerCase() : "";
-        const currentUserEmail = user.email.trim().toLowerCase();
-        if (profileEmail && profileEmail !== currentUserEmail) {
-          setData({ ...empty, email: user.email });
-          setProfileLoading(false);
-          return;
-        }
         const hasParts =
           typeof json.firstName === "string" ||
           typeof json.middleName === "string" ||

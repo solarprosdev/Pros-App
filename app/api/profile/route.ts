@@ -1,25 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/session";
 import { getProfile, setProfile, type UserProfile } from "@/lib/profile-store";
-import { getRecruitByEmail, isAirtableConfigured } from "@/lib/airtable";
+import { fetchProfileFromBubble, isBubbleConfigured } from "@/lib/bubble";
 import { syncRampBankAccount, RampRoutingNumberError } from "@/lib/ramp";
 import { joinFullName, parseFullName } from "@/lib/name-utils";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-function toProfile(recruit: { name: string; email: string; bank: string; account: string; routing: string }): UserProfile {
-  const { firstName, middleName, lastName } = parseFullName(recruit.name);
-  return {
-    firstName,
-    middleName,
-    lastName,
-    email: recruit.email,
-    bank: recruit.bank,
-    account: recruit.account,
-    routing: recruit.routing,
-  };
-}
 
 export async function GET() {
   const log = (msg: string, ...args: unknown[]) => console.log("[Profile GET]", msg, ...args);
@@ -29,35 +16,54 @@ export async function GET() {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
   log("session email:", session.email);
-  const configured = isAirtableConfigured();
-  log("Airtable configured:", configured);
+  const bubbleOk = isBubbleConfigured();
+  log("Bubble configured:", bubbleOk);
 
-  let debug: { source: string; airtableConfigured: boolean; error?: string } = {
-    source: "memory",
-    airtableConfigured: configured,
-  };
+  let fetchError: string | undefined;
 
-  if (configured) {
+  if (bubbleOk) {
     try {
-      const recruit = await getRecruitByEmail(session.email);
-      log("recruit from Airtable:", recruit ? "found" : "null");
-      if (recruit) {
-        const payload = toProfile(recruit);
-        log("returning Airtable profile");
+      const bubbleProfile = await fetchProfileFromBubble(session.email);
+      if (bubbleProfile) {
+        log("returning profile from Bubble (see [Bubble] logs above for raw response)");
         return NextResponse.json(
-          { ...payload, _debug: { source: "airtable", airtableConfigured: true } },
+          {
+            ...bubbleProfile,
+            _debug: { source: "bubble" as const, bubbleConfigured: true },
+          },
           { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" } }
         );
       }
-      debug.error = "No Airtable record found for this email (Email Lower or Name/Rep Work Email Final).";
+      fetchError = "Bubble returned no usable profile (see server logs [Bubble] for response body).";
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      log("Airtable error:", message);
-      debug.error = message;
+      log("Bubble threw (details in [Bubble] logs):", message);
+      fetchError = message;
     }
-  } else {
-    debug.error = "AIRTABLE_API_KEY or AIRTABLE_BASE_ID not set in .env.local.";
+    const debug = {
+      source: "memory" as const,
+      bubbleConfigured: true,
+      ...(fetchError ? { error: fetchError } : {}),
+    };
+    const profile = getProfile(session.email);
+    const data: UserProfile = profile ?? {
+      bank: "",
+      account: "",
+      routing: "",
+      email: session.email,
+      firstName: "",
+      middleName: "",
+      lastName: "",
+    };
+    log("Bubble configured but no profile — returning in-memory/empty (Airtable is not used)");
+    return NextResponse.json(
+      { ...data, _debug: debug },
+      { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" } }
+    );
   }
+
+  fetchError =
+    "Bubble not configured. Set BUBBLE_SEARCH_URL or BUBBLE_WORKFLOW_URL in pros-app/.env.local and restart the server.";
 
   const profile = getProfile(session.email);
   const data: UserProfile = profile ?? {
@@ -69,9 +75,16 @@ export async function GET() {
     middleName: "",
     lastName: "",
   };
-  log("returning in-memory/empty profile");
+  log("returning in-memory/empty profile —", fetchError);
   return NextResponse.json(
-    { ...data, _debug: debug },
+    {
+      ...data,
+      _debug: {
+        source: "memory" as const,
+        bubbleConfigured: false,
+        error: fetchError,
+      },
+    },
     { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" } }
   );
 }

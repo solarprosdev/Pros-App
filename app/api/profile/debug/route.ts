@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/session";
-import { getRecruitByEmail, isAirtableConfigured } from "@/lib/airtable";
+import { fetchProfileFromBubble, isBubbleConfigured } from "@/lib/bubble";
 
 /**
- * GET /api/profile/debug - helps verify why profile might not populate.
- * Remove or restrict in production.
+ * GET /api/profile/debug — Bubble-only (Airtable is not used for profile sync).
  */
 export async function GET() {
   const session = await getSessionFromCookie();
@@ -13,33 +12,46 @@ export async function GET() {
       ok: false,
       error: "Not signed in",
       email: null,
-      airtableConfigured: isAirtableConfigured(),
+      bubbleConfigured: isBubbleConfigured(),
       recordFound: false,
     });
   }
   const email = session.email;
-  const airtableConfigured = isAirtableConfigured();
+  const bubbleConfigured = isBubbleConfigured();
   let recordFound = false;
   let recordPreview: Record<string, string> | null = null;
-  if (airtableConfigured) {
-    const recruit = await getRecruitByEmail(email);
-    if (recruit) {
-      recordFound = true;
-      recordPreview = {
-        name: recruit.name,
-        email: recruit.email,
-        bank: recruit.bank,
-        account: recruit.account,
-        routing: recruit.routing,
-      };
+  let source: "bubble" | null = null;
+  let bubbleError: string | undefined;
+
+  if (bubbleConfigured) {
+    try {
+      const bubble = await fetchProfileFromBubble(email);
+      if (bubble) {
+        recordFound = true;
+        source = "bubble";
+        recordPreview = {
+          email: bubble.email,
+          bank: bubble.bank,
+          account: bubble.account,
+          routing: bubble.routing,
+          firstName: bubble.firstName,
+          middleName: bubble.middleName,
+          lastName: bubble.lastName,
+        };
+      }
+    } catch (e) {
+      bubbleError = e instanceof Error ? e.message : String(e);
     }
   }
+
   return NextResponse.json({
     ok: true,
     email,
     emailLower: email.trim().toLowerCase(),
-    airtableConfigured,
+    bubbleConfigured,
+    source,
     recordFound,
     recordPreview,
+    ...(bubbleError ? { bubbleError } : {}),
   });
 }
