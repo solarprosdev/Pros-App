@@ -55,7 +55,7 @@ export async function GET() {
       middleName: "",
       lastName: "",
     };
-    log("Bubble configured but no profile — returning in-memory/empty (Airtable is not used)");
+    log("Bubble configured but no profile — returning in-memory/empty");
     return NextResponse.json(
       { ...data, _debug: debug },
       { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" } }

@@ -65,7 +65,7 @@ export default function Home() {
     }
   }, [user]);
 
-  // Fetch profile when signed in and viewing Direct Deposit Info (sync from Airtable, no cache)
+  // Fetch profile when signed in and viewing Direct Deposit Info (sync from Bubble, no cache)
   useEffect(() => {
     if (!user || activeSection !== "direct-deposit") return;
     let cancelled = false;

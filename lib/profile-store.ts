@@ -1,6 +1,6 @@
 /**
  * In-memory store for user profile (Bank, Account, Routing, Email, name parts).
- * Keyed by authenticated user email. Replace with Airtable when ready.
+ * Keyed by authenticated user email. Source of truth is Bubble (read on GET, saved via Make webhook on POST).
  */
 
 export interface UserProfile {
