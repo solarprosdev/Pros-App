@@ -1,5 +1,5 @@
 /**
- * In-memory store for user profile (Bank, Account, Routing, Email, Name).
+ * In-memory store for user profile (Bank, Account, Routing, Email, name parts).
  * Keyed by authenticated user email. Replace with Airtable when ready.
  */
 
@@ -8,7 +8,9 @@ export interface UserProfile {
   account: string;
   routing: string;
   email: string;
-  name: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
 }
 
 const store = new Map<string, UserProfile>();
@@ -28,14 +30,18 @@ export function setProfile(userEmail: string, data: Partial<UserProfile>): UserP
     account: "",
     routing: "",
     email: userEmail,
-    name: "",
+    firstName: "",
+    middleName: "",
+    lastName: "",
   };
   const updated: UserProfile = {
     bank: data.bank ?? existing.bank,
     account: data.account ?? existing.account,
     routing: data.routing ?? existing.routing,
     email: data.email ?? existing.email,
-    name: data.name ?? existing.name,
+    firstName: data.firstName ?? existing.firstName,
+    middleName: data.middleName ?? existing.middleName,
+    lastName: data.lastName ?? existing.lastName,
   };
   store.set(k, updated);
   return updated;

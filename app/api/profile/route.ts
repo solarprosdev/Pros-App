@@ -3,13 +3,17 @@ import { getSessionFromCookie } from "@/lib/session";
 import { getProfile, setProfile, type UserProfile } from "@/lib/profile-store";
 import { getRecruitByEmail, isAirtableConfigured } from "@/lib/airtable";
 import { syncRampBankAccount, RampRoutingNumberError } from "@/lib/ramp";
+import { joinFullName, parseFullName } from "@/lib/name-utils";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 function toProfile(recruit: { name: string; email: string; bank: string; account: string; routing: string }): UserProfile {
+  const { firstName, middleName, lastName } = parseFullName(recruit.name);
   return {
-    name: recruit.name,
+    firstName,
+    middleName,
+    lastName,
     email: recruit.email,
     bank: recruit.bank,
     account: recruit.account,
@@ -61,7 +65,9 @@ export async function GET() {
     account: "",
     routing: "",
     email: session.email,
-    name: "",
+    firstName: "",
+    middleName: "",
+    lastName: "",
   };
   log("returning in-memory/empty profile");
   return NextResponse.json(
@@ -88,17 +94,54 @@ export async function POST(request: Request) {
   }
   console.log("[Profile POST] body keys:", Object.keys(body ?? {}));
 
-  const incoming = {
+  const legacyName = typeof (body as { name?: string }).name === "string" ? (body as { name: string }).name : undefined;
+  const hasNameParts =
+    typeof body.firstName === "string" ||
+    typeof body.middleName === "string" ||
+    typeof body.lastName === "string";
+  const parsedFromLegacy = legacyName !== undefined && !hasNameParts ? parseFullName(legacyName) : null;
+
+  const incoming: Partial<UserProfile> = {
     bank: typeof body.bank === "string" ? body.bank : undefined,
     account: typeof body.account === "string" ? body.account : undefined,
     routing: typeof body.routing === "string" ? body.routing : undefined,
     email: typeof body.email === "string" ? body.email : undefined,
-    name: typeof body.name === "string" ? body.name : undefined,
+    firstName: hasNameParts
+      ? typeof body.firstName === "string"
+        ? body.firstName
+        : undefined
+      : parsedFromLegacy
+        ? parsedFromLegacy.firstName
+        : undefined,
+    middleName: hasNameParts
+      ? typeof body.middleName === "string"
+        ? body.middleName
+        : undefined
+      : parsedFromLegacy
+        ? parsedFromLegacy.middleName
+        : undefined,
+    lastName: hasNameParts
+      ? typeof body.lastName === "string"
+        ? body.lastName
+        : undefined
+      : parsedFromLegacy
+        ? parsedFromLegacy.lastName
+        : undefined,
   };
 
   // ── Step 1: Validate routing number with Ramp BEFORE saving or calling Make ──
   console.log("[Profile POST] ========== RAMP BANK SYNC SECTION (pre-save) ==========");
-  const fullNameForRamp = (incoming.name || "").trim();
+  const existing = getProfile(session.email);
+  const mergedForRamp: UserProfile = {
+    bank: incoming.bank ?? existing?.bank ?? "",
+    account: incoming.account ?? existing?.account ?? "",
+    routing: incoming.routing ?? existing?.routing ?? "",
+    email: incoming.email ?? existing?.email ?? session.email,
+    firstName: incoming.firstName ?? existing?.firstName ?? "",
+    middleName: incoming.middleName ?? existing?.middleName ?? "",
+    lastName: incoming.lastName ?? existing?.lastName ?? "",
+  };
+  const fullNameForRamp = joinFullName(mergedForRamp.firstName, mergedForRamp.middleName, mergedForRamp.lastName);
   const accountForRamp = (incoming.account || "").trim();
   const routingForRamp = (incoming.routing || "").trim();
 
@@ -133,13 +176,14 @@ export async function POST(request: Request) {
   if (!webhookUrl) {
     makeLog("MAKE_WEBHOOK_URL is not set – skipping Make.com webhook");
   } else {
-    const fullName = (updated.name || "").trim();
     const makePayload = {
       Bank: updated.bank,
       Account: updated.account,
       Routing: updated.routing,
       Email: updated.email,
-      First: fullName,
+      First: (updated.firstName || "").trim(),
+      Middle: (updated.middleName || "").trim(),
+      Last: (updated.lastName || "").trim(),
     };
     makeLog("Calling Make.com webhook – payload:", JSON.stringify(makePayload, null, 2));
     try {

@@ -5,13 +5,16 @@ import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthHeader } from "@/components/AuthHeader";
 import { AppNav, type AppSection } from "@/components/AppNav";
+import { parseFullName } from "@/lib/name-utils";
 
 interface ProfileData {
   bank: string;
   account: string;
   routing: string;
   email: string;
-  name: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
 }
 
 const empty: ProfileData = {
@@ -19,7 +22,9 @@ const empty: ProfileData = {
   account: "",
   routing: "",
   email: "",
-  name: "",
+  firstName: "",
+  middleName: "",
+  lastName: "",
 };
 
 const FIELDS: { key: keyof ProfileData; label: string }[] = [
@@ -27,7 +32,9 @@ const FIELDS: { key: keyof ProfileData; label: string }[] = [
   { key: "account", label: "Account Number" },
   { key: "routing", label: "Routing Number" },
   { key: "email", label: "Email" },
-  { key: "name", label: "Full Name" },
+  { key: "firstName", label: "First name" },
+  { key: "middleName", label: "Middle name" },
+  { key: "lastName", label: "Last name" },
 ];
 
 export default function Home() {
@@ -80,12 +87,34 @@ export default function Home() {
           setProfileLoading(false);
           return;
         }
+        const hasParts =
+          typeof json.firstName === "string" ||
+          typeof json.middleName === "string" ||
+          typeof json.lastName === "string";
+        const fromLegacy =
+          !hasParts && typeof json.name === "string"
+            ? parseFullName(json.name)
+            : { firstName: "", middleName: "", lastName: "" };
         setData({
           bank: typeof json.bank === "string" ? json.bank : "",
           account: typeof json.account === "string" ? json.account : "",
           routing: typeof json.routing === "string" ? json.routing : "",
           email: typeof json.email === "string" ? json.email : user.email,
-          name: typeof json.name === "string" ? json.name : "",
+          firstName: hasParts
+            ? typeof json.firstName === "string"
+              ? json.firstName
+              : ""
+            : fromLegacy.firstName,
+          middleName: hasParts
+            ? typeof json.middleName === "string"
+              ? json.middleName
+              : ""
+            : fromLegacy.middleName,
+          lastName: hasParts
+            ? typeof json.lastName === "string"
+              ? json.lastName
+              : ""
+            : fromLegacy.lastName,
         });
       } catch {
         if (!cancelled) setData({ ...empty, email: user.email });
