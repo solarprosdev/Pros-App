@@ -41,10 +41,11 @@ export async function POST(request: Request) {
   setOtp(email, code);
   try {
     await sendOtpEmail(email, code);
-  } catch (err) {
-    console.error("SendGrid error:", err);
+  } catch (err: unknown) {
+    const sgErr = err as { response?: { body?: unknown }; message?: string };
+    console.error("SendGrid error:", sgErr.response?.body ?? sgErr.message ?? err);
     return NextResponse.json(
-      { error: "Failed to send email. Check SENDGRID_API_KEY and sender." },
+      { error: "Failed to send verification email. Please try again." },
       { status: 502 }
     );
   }

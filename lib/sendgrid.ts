@@ -11,7 +11,31 @@ const SUBJECT_LOGIN = process.env.SENDGRID_SUBJECT_LOGIN || "Verify your Pros Ap
 const TEMPLATE_ID_LOGIN = process.env.SENDGRID_TEMPLATE_ID_LOGIN;
 
 export function isSendGridConfigured(): boolean {
-  return Boolean(apiKey && apiKey.length > 10);
+  return Boolean(apiKey && apiKey.length > 10 && TEMPLATE_ID_LOGIN);
+}
+
+/**
+ * Removes an email from SendGrid's bounce/block/spam suppression lists so
+ * future sends are not silently dropped with "Bounced Address".
+ */
+async function clearSuppressions(email: string): Promise<void> {
+  if (!apiKey) return;
+
+  const headers = {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  };
+
+  const lists = ["bounces", "blocks", "spam_reports"] as const;
+
+  await Promise.allSettled(
+    lists.map((list) =>
+      fetch(`https://api.sendgrid.com/v3/suppression/${list}/${encodeURIComponent(email)}`, {
+        method: "DELETE",
+        headers,
+      })
+    )
+  );
 }
 
 export async function sendOtpEmail(to: string, code: string): Promise<void> {
@@ -19,13 +43,12 @@ export async function sendOtpEmail(to: string, code: string): Promise<void> {
     throw new Error("SENDGRID_API_KEY is not set or invalid");
   }
 
-  // If a dynamic template ID is configured, use it. Pass the code under many possible
-  // variable names so the template shows it. If yours uses something else, set
-  // SENDGRID_TEMPLATE_CODE_VAR in .env.local to that name (e.g. SENDGRID_TEMPLATE_CODE_VAR=loginCode).
+  // Clear any prior bounce/block/spam suppression so the email is not silently dropped.
+  await clearSuppressions(to);
+
   const codeVar = process.env.SENDGRID_TEMPLATE_CODE_VAR;
   const templateData: Record<string, string> = {
     code,
-    verificatio: code,
     verification: code,
     verification_code: code,
     otp: code,
@@ -41,23 +64,15 @@ export async function sendOtpEmail(to: string, code: string): Promise<void> {
   if (codeVar) {
     templateData[codeVar] = code;
   }
-  if (TEMPLATE_ID_LOGIN) {
-    await sgMail.send({
-      to,
-      from: { email: FROM_EMAIL, name: FROM_NAME },
-      subject: SUBJECT_LOGIN,
-      templateId: TEMPLATE_ID_LOGIN,
-      dynamicTemplateData: templateData,
-    });
-    return;
+  if (!TEMPLATE_ID_LOGIN) {
+    throw new Error("SENDGRID_TEMPLATE_ID_LOGIN is not set. A dynamic template is required.");
   }
 
-  // Fallback: simple subject + text/html email.
   await sgMail.send({
     to,
     from: { email: FROM_EMAIL, name: FROM_NAME },
-    subject: "Your login code – Sales Rep Portal",
-    text: `Your login code is: ${code}\n\nIt expires in 10 minutes.`,
-    html: `<p>Your login code is: <strong>${code}</strong></p><p>It expires in 10 minutes.</p>`,
+    subject: SUBJECT_LOGIN,
+    templateId: TEMPLATE_ID_LOGIN,
+    dynamicTemplateData: templateData,
   });
 }
